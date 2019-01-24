@@ -26,7 +26,7 @@ namespace InterLabEvoLogHelper
 
         private void InitializeControls()
         {
-            this.Text = "Files to process: 0";
+            this.Text = "Evo Log Helper";
             abortFunction = false;
             textBox1.ReadOnly = true;
             textBox1.Text = "";
@@ -44,6 +44,8 @@ namespace InterLabEvoLogHelper
 
                 if (btnRead.Text == "&Read Logs")
                 {
+                    folderBrowserDialog1.Description = "Select Log Folder to process";
+
                     DialogResult result = folderBrowserDialog1.ShowDialog();
                     if (result == DialogResult.OK)
                     {
@@ -60,6 +62,12 @@ namespace InterLabEvoLogHelper
                         string[] files = Directory.GetFiles(folderBrowserDialog1.SelectedPath);
                         i = files.Length;
                         this.Text = "Files to process: " + i; //Status Notification
+
+                        saveFileDialog1.InitialDirectory =
+                            Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+                        saveFileDialog1.Title = "Select Destination File Location";
+                        saveFileDialog1.Filter= "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+                        saveFileDialog1.DefaultExt = "txt";
 
                         // When user clicks button, show the dialog.
                         DialogResult resultSaveDialog = saveFileDialog1.ShowDialog();
@@ -93,7 +101,10 @@ namespace InterLabEvoLogHelper
                                 toolStripStatusLabel1.Text = "Now sorting";//Status Notification
 
                                 sortFile(destinationPath);
+
                                 textBox1.Text = textBox1.Text + "Sorting process finished" + Environment.NewLine;
+
+                                DivideLargeFile(destinationPath);
 
                                 textBox1.Text = textBox1.Text + "Consolidation process finished" + Environment.NewLine; ;//Status Notification
 
@@ -145,7 +156,7 @@ namespace InterLabEvoLogHelper
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString() + "\nBtn Read File");
+                MessageBox.Show(ex.Message + "\nBtn Read File");
             }
         }
 
@@ -211,7 +222,7 @@ namespace InterLabEvoLogHelper
             catch (Exception ex)
             {
 
-                MessageBox.Show(ex.ToString() + "\nProcess File");
+                MessageBox.Show(ex.Message + "\nProcess File");
             }
          
         }
@@ -227,7 +238,8 @@ namespace InterLabEvoLogHelper
         {
             try
             {
-                string[] pathin = destinationPath.Split('.');
+                string[] pathin = destinationPath.Split('\\');
+                string pathOut = destinationPath.Replace(pathin[pathin.Length-1],"");
                 DateTime dateTime;
                 string[] lines = File.ReadAllLines(destinationPath);
                 var data = lines;
@@ -240,14 +252,14 @@ namespace InterLabEvoLogHelper
                     .OrderByDescending(x => x.SortKey).ThenByDescending(x => x.SortKeyThenBy)
                     .Select(x => x.Line);
 
-                textBox1.Text = textBox1.Text + "Destination path for sorted file:\n " + pathin[0] + "_sorted.txt" +
+                textBox1.Text = textBox1.Text + "Destination path for sorted file:\n " + pathOut  + pathin[pathin.Length-1] +
                                 Environment.NewLine;//Status Notification
 
-                File.WriteAllLines(pathin[0] + ".txt", sorted);
+                File.WriteAllLines(pathOut + pathin[pathin.Length - 1] , sorted);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString() + "\nSortFile");
+                MessageBox.Show(ex.Message + "\nSortFile");
             }
         }
 
@@ -270,7 +282,7 @@ namespace InterLabEvoLogHelper
             catch (Exception ex)
             {
 
-                MessageBox.Show(ex.ToString() + "\nCreate Error String");
+                MessageBox.Show(ex.Message + "\nCreate Error String");
                 return String.Empty;
             }
         }
@@ -281,19 +293,18 @@ namespace InterLabEvoLogHelper
             {
                 string compare = "";
                 string comparePath="";
-                string[] pathin = destinationPath.Split('.');
-                string[] pathChunk = destinationPath.Split('\\');
+                string[] pathin = destinationPath.Split('\\');
+                string pathOut = destinationPath.Replace(pathin[pathin.Length - 1], "");
                 string outputText = "";
-                string outputpath = destinationPath.Replace(pathChunk[pathChunk.Length - 1], "Chunks");
-                string outfile = pathChunk[pathChunk.Length - 1].Substring(0, pathChunk[pathChunk.Length - 1].Length - 4);
+                string outputpath = pathOut + "Chunks";
+                string outfile = pathin[pathin.Length-1];
 
                 if (!Directory.Exists(outputpath))
                 {
                     Directory.CreateDirectory(outputpath);
-                    pathChunk = destinationPath.Replace(pathChunk[pathChunk.Length - 1], "Chunks").Split('\\');
                 }
 
-                var lineCount = File.ReadLines(pathin[0] + ".txt").Count();
+                var lineCount = File.ReadLines(pathOut + outfile).Count();
 
                 toolStripProgressBar1.Maximum = lineCount;
                 toolStripProgressBar1.Visible = true;
@@ -301,7 +312,7 @@ namespace InterLabEvoLogHelper
                 
                 //using (StreamWriter sw = File.AppendText(destinationPath))
 
-                    foreach (var line in File.ReadLines(pathin[0] + ".txt"))
+                    foreach (var line in File.ReadLines(pathOut + outfile))
                     {
                         string[] toCompare = line.Split(' ');
 
@@ -310,7 +321,7 @@ namespace InterLabEvoLogHelper
                         // This text is always added, making the file longer over time
                         //if it is not deleted.
 
-                        destinationPath = outputpath + "\\" + compare + "_" + outfile + ".txt";
+                        destinationPath = outputpath + "\\" + compare + "_" + outfile;
                         File.AppendAllText(destinationPath, line + Environment.NewLine);
 
                         if (comparePath==String.Empty || comparePath != destinationPath)
@@ -331,7 +342,69 @@ namespace InterLabEvoLogHelper
             catch (Exception ex)
             {
 
-               MessageBox.Show(ex.ToString() + "\nCreate Chunks");
+               MessageBox.Show(ex.Message + "\nCreate Chunks");
+            }
+        }
+
+        public void DivideLargeFile(string path)
+        {
+            string[] lines = File.ReadAllLines(path);
+            string[] arrpath = path.Split('\\');
+
+            int partFileCount = 0;
+
+            long sizeOfFile = new FileInfo(path).Length;
+            sizeOfFile = sizeOfFile / 1024000; //conversion to MB
+
+            try
+            {
+                if (sizeOfFile > 2)
+                {
+                    var localPath = "";
+                    var localFile = "";
+
+                    textBox1.Text = textBox1.Text + "File is larger than 100 MB! -> Creation of file-parts started" + Environment.NewLine;
+
+                    //Create subdir in not existing
+                    if (!Directory.Exists(path.Replace(arrpath[arrpath.Length - 1], "file-parts")))
+                    {
+                        Directory.CreateDirectory(path.Replace(arrpath[arrpath.Length - 1], "file-parts"));
+                    }
+
+                    localPath = path.Replace(arrpath[arrpath.Length - 1], "file-parts\\");
+                    localFile = arrpath[arrpath.Length - 1].Substring(0, arrpath[arrpath.Length - 1].Length - 4);
+                    //calculate partFileCount
+                    partFileCount = Convert.ToInt32(sizeOfFile / 2) + 1;
+                    
+                    for (int i = 0; i < partFileCount; i++)
+                    {
+                        var plocalPath = Path.Combine(localPath, localFile)  + i + ".txt";
+
+                        textBox1.Text = textBox1.Text + "Create File: " + plocalPath + Environment.NewLine;
+
+                        foreach (var line in lines)
+                        {
+                            
+                            //todo
+                            using (StreamWriter writer = new StreamWriter(plocalPath , true))
+                            {
+                                writer.WriteLine(line);
+                            }
+                            //check 
+                            long partFileSize = new FileInfo(plocalPath).Length;
+                            long x = partFileSize / 1024000;
+                            if (x > 1) break;
+                        }
+                    }
+
+                    textBox1.Text = textBox1.Text + "Creation of file-parts finished" + Environment.NewLine;
+
+                }
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message + "\nDivideLargeFiles");
             }
         }
 
@@ -339,9 +412,19 @@ namespace InterLabEvoLogHelper
 
         private void toolStripProgressBar1_Click(object sender, EventArgs e)
         {
-
+            
         }
 
-        
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AboutBox1 about = new AboutBox1();
+            about.ShowDialog();
+        }
+
+        private void closeProgramToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Close();
+            Dispose();
+        }
     }
 }
