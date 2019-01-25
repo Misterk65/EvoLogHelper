@@ -35,7 +35,7 @@ namespace InterLabEvoLogHelper
             toolStripProgressBar1.Visible = false;
         }
 
-        private void btnRead_Click(object sender, EventArgs e)
+        private void BtnRead_Click(object sender, EventArgs e)
         {
             try
             {
@@ -88,7 +88,7 @@ namespace InterLabEvoLogHelper
 
                                 
 
-                                processFiles(file);
+                                ProcessFiles(file);
 
                                 Application.DoEvents();
                             }
@@ -100,11 +100,11 @@ namespace InterLabEvoLogHelper
                                 textBox1.Text = textBox1.Text + "Starting sorting process" + Environment.NewLine; //Status Notification
                                 toolStripStatusLabel1.Text = "Now sorting";//Status Notification
 
-                                sortFile(destinationPath);
+                                SortFile(destinationPath);
 
                                 textBox1.Text = textBox1.Text + "Sorting process finished" + Environment.NewLine;
 
-                                DivideLargeFile(destinationPath);
+                                DivideLargeFileByLines(destinationPath);
 
                                 textBox1.Text = textBox1.Text + "Consolidation process finished" + Environment.NewLine; ;//Status Notification
 
@@ -160,7 +160,7 @@ namespace InterLabEvoLogHelper
             }
         }
 
-        private void processFiles(string file)
+        private void ProcessFiles(string file)
         {
             try
             {
@@ -187,8 +187,7 @@ namespace InterLabEvoLogHelper
                             if ((arrStrings[3].ToLower() != "info") && (arrStrings[3].ToLower() != "debug"))
                             {
                                 //Check arrStrings[0] is Date, if yes, create string arrString[0] ~ [3] plus " - ". If not add string in front
-                                DateTime datetime;
-                                if (DateTime.TryParse(arrStrings[0], out datetime))
+                                if (DateTime.TryParse(arrStrings[0], out var datetime))
                                 {
                                     preamble = arrStrings[0] + " " + arrStrings[1] + " " + arrStrings[2] + " " + arrStrings[3] +
                                                " - ";
@@ -227,26 +226,25 @@ namespace InterLabEvoLogHelper
          
         }
 
-        private void saveFileDialog1_FileOk(object sender, CancelEventArgs e)
+        private void SaveFileDialog1_FileOk(object sender, CancelEventArgs e)
         {
             // Get file name.
             destinationPath = saveFileDialog1.FileName;
             
         }
 
-        private void sortFile(string destinationPath)
+        private void SortFile(string destinationPath)
         {
             try
             {
                 string[] pathin = destinationPath.Split('\\');
                 string pathOut = destinationPath.Replace(pathin[pathin.Length-1],"");
-                DateTime dateTime;
                 string[] lines = File.ReadAllLines(destinationPath);
                 var data = lines;
                 var sorted = data.Select(line => new
                 {
                     SortKey = DateTime.ParseExact(line.Split(' ')[0], "yyyy-MM-dd", null),
-                    SortKeyThenBy = DateTime.TryParse(line.Split(' ')[1], out dateTime),
+                    SortKeyThenBy = DateTime.TryParse(line.Split(' ')[1], out DateTime dateTime),
                     Line = line
                 })
                     .OrderByDescending(x => x.SortKey).ThenByDescending(x => x.SortKeyThenBy)
@@ -295,7 +293,6 @@ namespace InterLabEvoLogHelper
                 string comparePath="";
                 string[] pathin = destinationPath.Split('\\');
                 string pathOut = destinationPath.Replace(pathin[pathin.Length - 1], "");
-                string outputText = "";
                 string outputpath = pathOut + "Chunks";
                 string outfile = pathin[pathin.Length-1];
 
@@ -310,7 +307,6 @@ namespace InterLabEvoLogHelper
                 toolStripProgressBar1.Visible = true;
                 toolStripStatusLabel1.Text = "Lines to process: " + lineCount;
                 
-                //using (StreamWriter sw = File.AppendText(destinationPath))
 
                     foreach (var line in File.ReadLines(pathOut + outfile))
                     {
@@ -346,82 +342,92 @@ namespace InterLabEvoLogHelper
             }
         }
 
-        public void DivideLargeFile(string path)
+        private void DivideLargeFileByLines(string path)
         {
-            string[] lines = File.ReadAllLines(path);
-            string[] arrpath = path.Split('\\');
+            //Count lines in document
+            var lineCount = File.ReadLines(path).Count();
 
-            int partFileCount = 0;
+            //Create Subdir
+            string[] extractDocPath = path.Split('\\');
+            string outPath = path.Replace(extractDocPath[extractDocPath.Length-1], "log-parts");
 
-            long sizeOfFile = new FileInfo(path).Length;
-            sizeOfFile = sizeOfFile / 1024000; //conversion to MB
-
+            //Create file name
+            string[] extractFileName = extractDocPath[extractDocPath.Length - 1].Split('.');
             try
             {
-                if (sizeOfFile > 2)
+
+                //create output Directory if not existing
+                if (!Directory.Exists(outPath))
                 {
-                    var localPath = "";
-                    var localFile = "";
+                    Directory.CreateDirectory(outPath);
+                }
 
-                    textBox1.Text = textBox1.Text + "File is larger than 100 MB! -> Creation of file-parts started" + Environment.NewLine;
+                //If more than 900000 lines start the division in more than one file
 
-                    //Create subdir in not existing
-                    if (!Directory.Exists(path.Replace(arrpath[arrpath.Length - 1], "file-parts")))
+                if (lineCount >= 9000)
+                {
+                    textBox1.Text = textBox1.Text + "File has more than 900K lines! -> Creation of log-parts started" + Environment.NewLine;
+
+                    var cnt = 0;
+                    var fileCnt = 1;
+                    var lnCnt = lineCount;
+
+                    toolStripStatusLabel1.Text = "Lines to process: " + lnCnt.ToString();
+                    toolStripProgressBar1.Maximum = lnCnt;
+
+                    outPath = Path.Combine(outPath, extractFileName[0]);
+                    var writePath = "-" + fileCnt + ".txt";
+
+                    using (StreamReader sr = new StreamReader(path))
                     {
-                        Directory.CreateDirectory(path.Replace(arrpath[arrpath.Length - 1], "file-parts"));
-                    }
-
-                    localPath = path.Replace(arrpath[arrpath.Length - 1], "file-parts\\");
-                    localFile = arrpath[arrpath.Length - 1].Substring(0, arrpath[arrpath.Length - 1].Length - 4);
-                    //calculate partFileCount
-                    partFileCount = Convert.ToInt32(sizeOfFile / 2) + 1;
-                    
-                    for (int i = 0; i < partFileCount; i++)
-                    {
-                        var plocalPath = Path.Combine(localPath, localFile)  + i + ".txt";
-
-                        textBox1.Text = textBox1.Text + "Create File: " + plocalPath + Environment.NewLine;
-
-                        foreach (var line in lines)
+                        while (sr.Peek() >= 0)
                         {
-                            
-                            //todo
-                            using (StreamWriter writer = new StreamWriter(plocalPath , true))
+                            if (cnt <= 9000)
                             {
-                                writer.WriteLine(line);
+                                cnt++;
+                                //write to file
+                                using (StreamWriter writer = new StreamWriter(outPath + writePath, true))
+                                {
+                                    writer.WriteLine(sr.ReadLine());
+                                }
+
+                                lnCnt--;
                             }
-                            //check 
-                            long partFileSize = new FileInfo(plocalPath).Length;
-                            long x = partFileSize / 1024000;
-                            if (x > 1) break;
+                            else
+                            {
+                                cnt = 0;
+                                fileCnt++;
+                                writePath = "-" + fileCnt + ".txt";
+
+                                using (StreamWriter writer = new StreamWriter(outPath + writePath, true))
+                                {
+                                    writer.WriteLine(sr.ReadLine());
+                                }
+
+                                lnCnt--;
+                            }
+
+                            toolStripProgressBar1.Value = lnCnt;
+                            toolStripStatusLabel1.Text = "Lines to process: " + lnCnt.ToString();
                         }
                     }
-
-                    textBox1.Text = textBox1.Text + "Creation of file-parts finished" + Environment.NewLine;
-
+                    textBox1.Text = textBox1.Text + "Creation of log-parts started" + Environment.NewLine;
                 }
             }
             catch (Exception ex)
             {
-
-                MessageBox.Show(ex.Message + "\nDivideLargeFiles");
+                MessageBox.Show(ex.Message + "\nDivideLargeFileByLines");
             }
+
         }
 
-
-
-        private void toolStripProgressBar1_Click(object sender, EventArgs e)
-        {
-            
-        }
-
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        private void AboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             AboutBox1 about = new AboutBox1();
             about.ShowDialog();
         }
 
-        private void closeProgramToolStripMenuItem_Click(object sender, EventArgs e)
+        private void CloseProgramToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Close();
             Dispose();

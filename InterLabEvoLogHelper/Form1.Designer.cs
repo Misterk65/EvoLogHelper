@@ -50,11 +50,11 @@
             this.btnRead.TabIndex = 0;
             this.btnRead.Text = "&Read Logs";
             this.btnRead.UseVisualStyleBackColor = true;
-            this.btnRead.Click += new System.EventHandler(this.btnRead_Click);
+            this.btnRead.Click += new System.EventHandler(this.BtnRead_Click);
             // 
             // saveFileDialog1
             // 
-            this.saveFileDialog1.FileOk += new System.ComponentModel.CancelEventHandler(this.saveFileDialog1_FileOk);
+            this.saveFileDialog1.FileOk += new System.ComponentModel.CancelEventHandler(this.SaveFileDialog1_FileOk);
             // 
             // textBox1
             // 
@@ -85,8 +85,7 @@
             // toolStripProgressBar1
             // 
             this.toolStripProgressBar1.Name = "toolStripProgressBar1";
-            this.toolStripProgressBar1.Size = new System.Drawing.Size(50, 16);
-            this.toolStripProgressBar1.Click += new System.EventHandler(this.toolStripProgressBar1_Click);
+            this.toolStripProgressBar1.Size = new System.Drawing.Size(40, 10);
             // 
             // menuStrip1
             // 
@@ -104,14 +103,14 @@
             this.closeProgramToolStripMenuItem.Name = "closeProgramToolStripMenuItem";
             this.closeProgramToolStripMenuItem.Size = new System.Drawing.Size(97, 20);
             this.closeProgramToolStripMenuItem.Text = "&Close Program";
-            this.closeProgramToolStripMenuItem.Click += new System.EventHandler(this.closeProgramToolStripMenuItem_Click);
+            this.closeProgramToolStripMenuItem.Click += new System.EventHandler(this.CloseProgramToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
             this.aboutToolStripMenuItem.Size = new System.Drawing.Size(52, 20);
             this.aboutToolStripMenuItem.Text = "&About";
-            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
+            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.AboutToolStripMenuItem_Click);
             // 
             // Form1
             // 

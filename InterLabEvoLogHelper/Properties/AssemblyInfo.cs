@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("InterLabEvoLogHelper")]
-[assembly: AssemblyDescription("Tool to consolidate IL Evo logs, merge them together and sort the events accroding to date and time. Store them in daily files.")]
+[assembly: AssemblyDescription("Tiny tool to consolidate IL Evo logs, merge them together and sort the events accroding to date and time. Store them in daily files. In case files have more than 900K lines, the tool divides the base file in chunks with 900K lines as maximum.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("7layers ITP Services")]
 [assembly: AssemblyProduct("InterLabEvoLogHelper")]
